@@ -1,6 +1,6 @@
-## Interface: 90207
+## Interface: 90205
 ## Title: Currency Sorter
-## Version: 9.2.7
+## Version: 9.2.5
 ## Notes: Move around the currency categories
 ## Author: Andols
 ## SavedVariablesPerCharacter: Cs_order
