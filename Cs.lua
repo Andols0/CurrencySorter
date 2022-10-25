@@ -101,7 +101,7 @@ local function BuildList(numTokenTypes)
 	end
 	return IndexList
 end
-local function TokenFrame_Update(resetScrollPosition)
+local function Mod_TokenFrame_Update(resetScrollPosition)
 	local numTokenTypes = C_CurrencyInfo.GetCurrencyListSize();
 	CharacterFrameTab3:SetShown(numTokenTypes > 0);
 
@@ -118,7 +118,7 @@ function CurrencySorter.MoveUp(frame)
 			local Temp = Cs_order[i]
 			tremove(Cs_order,i)
 			tinsert(Cs_order, i - 1, Temp)
-			TokenFrame_Update()
+			Mod_TokenFrame_Update()
 			break
 		end
 	end
@@ -132,7 +132,7 @@ function CurrencySorter.MoveDown(frame)
 			local Temp = Cs_order[i]
 			tremove(Cs_order,i)
 			tinsert(Cs_order, i + 1, Temp)
-			TokenFrame_Update()
+			Mod_TokenFrame_Update()
 			break
 		end
 	end
@@ -157,7 +157,7 @@ local function CreateResetButton()
 	end)
 	Button:SetScript("OnClick", function()
 	Cs_order={}
-	TokenFrame_Update()
+	Mod_TokenFrame_Update()
 	end	)
 end
 
@@ -187,7 +187,7 @@ end
 local eventFrame = CreateFrame("FRAME")
 
 local function Load()
-	_G.TokenFrame_Update = TokenFrame_Update
+	hooksecurefunc("TokenFrame_Update", Mod_TokenFrame_Update)
 	TokenFrame:HookScript("OnShow",CreateArrowButtons)
 	CreateResetButton()
 	eventFrame:UnregisterEvent("ADDON_LOADED")
