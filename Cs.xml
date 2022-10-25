@@ -1,5 +1,4 @@
-<Ui xmlns="http://www.blizzard.com/wow/ui/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.blizzard.com/wow/ui/
-..\FrameXML\UI.xsd">
+<Ui xmlns="http://www.blizzard.com/wow/ui/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.blizzard.com/wow/ui/">
 	<Button name="SortUpArrowTemplate" parentKey="SortUpArrow" hidden="true" virtual="true">
 		<Size x="20" y="10"/>
 		<Anchors>
@@ -34,7 +33,7 @@
 	<Button name="SortDownArrowTemplate" parentKey="SortDownArrow" hidden="true" virtual="true">
 		<Size x="20" y="10"/>
 		<Anchors>
-			<Anchor point="TOPLEFT" relativeKey="SortUpArrow" relativePoint="BOTTOMLEFT" x="18" y="8"/>
+			<Anchor point="TOPLEFT" relativeKey="$parent.SortUpArrow" relativePoint="BOTTOMLEFT" x="18" y="8"/>
 		</Anchors>
 		<Layers>
 			<Layer level="BACKGROUND">
