@@ -103,10 +103,10 @@ local function BuildList(numTokenTypes)
 end
 local function Mod_TokenFrame_Update(resetScrollPosition)
 	local numTokenTypes = C_CurrencyInfo.GetCurrencyListSize();
-	CharacterFrameTab3:SetShown(numTokenTypes > 0);
-
-	local newDataProvider = CreateDataProvider(BuildList(numTokenTypes));
-	CharacterFrame.TokenFrame.ScrollBox:SetDataProvider(newDataProvider, not resetScrollPosition and ScrollBoxConstants.RetainScrollPosition);
+	if CharacterFrameTab3:IsVisible() then
+		local newDataProvider = CreateDataProvider(BuildList(numTokenTypes));
+		CharacterFrame.TokenFrame.ScrollBox:SetDataProvider(newDataProvider, not resetScrollPosition and ScrollBoxConstants.RetainScrollPosition);
+	end
 end
 
 function CurrencySorter.MoveUp(frame)
