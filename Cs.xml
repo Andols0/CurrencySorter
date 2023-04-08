@@ -27,6 +27,7 @@
 			<OnClick>
 				CurrencySorter.MoveUp(self)
 				self:Hide()
+				self:GetParent().SortDownArrow:Hide();
 			</OnClick>
 		</Scripts>
 	</Button>
@@ -58,6 +59,7 @@
 			<OnClick>
 				CurrencySorter.MoveDown(self)
 				self:Hide()
+				self:GetParent().SortUpArrow:Hide();
 			</OnClick>
 		</Scripts>
 	</Button>
