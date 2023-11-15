@@ -1,6 +1,6 @@
-## Interface: 100007
+## Interface: 100200
 ## Title: Currency Sorter
-## Version: 10.0.7
+## Version: 10.2.0
 ## Notes: Move around the currency categories
 ## Author: Andols
 ## SavedVariablesPerCharacter: Cs_order
