@@ -1,65 +1,29 @@
-Cs_order = Cs_order or {}
-
-local ListChanged = false
-
 CurrencySorter = {}
 
-local function Update_Cs_order(numTokenTypes,currencyInfo)
-	--print("Update")
-	local HeaderOrdering = {}
-	local CurrentHead = currencyInfo[1].name --setting the first for logic reasons
-	for i=1, #Cs_order do
-		HeaderOrdering[Cs_order[i].name] = i
-	end
-	for i = 1, numTokenTypes do
-		local name, isHeader = currencyInfo[i].name, currencyInfo[i].isHeader
-		if isHeader then
-			if CurrentHead ~= name then
-				Cs_order[HeaderOrdering[CurrentHead]].stop = i - 1
-				HeaderOrdering[CurrentHead] = nil
-			end
-			CurrentHead = name
-			if not HeaderOrdering[CurrentHead] then --A new category appeared
-				--print("New",CurrentHead)
-				HeaderOrdering[CurrentHead] = #Cs_order + 1
-			end
-			Cs_order[HeaderOrdering[CurrentHead]] = {name = name, start = i}
-		end
-		if i == numTokenTypes then
-			Cs_order[HeaderOrdering[CurrentHead]].stop = i
-			HeaderOrdering[CurrentHead] = nil
-		end
-	end
-	for _, v in pairs(HeaderOrdering) do
-		--print("Removing",k,v)
-		tremove(Cs_order,v)
-	end
-end
+local ParentHeaders = {}
 
-local function FirstTimeSetup(numTokenTypes)
-	--print("Firsttime")
-	local Cat = 1
-	local Headers = 0
-	for i = 1, numTokenTypes do
-		local currencyInfo = C_CurrencyInfo.GetCurrencyListInfo(i)
-		if currencyInfo.isHeader then
-			Headers = Headers + 1
-			if Cs_order[Cat] and not ( i == Cs_order[Cat].start) then
-				Cs_order[Cat].stop = i - 1
-				Cat = Cat + 1
-			end
-			local Category = {}
-			Category.name = currencyInfo.name
-			Category.start = i
-			Cs_order[Cat] = Category
+local function Storeheaders(data, lastheader)
+	local SavedHeaders = CurrencySave.headers
+	if data.currencyListDepth == 0 then
+		if not SavedHeaders[data.name] then
+			SavedHeaders[data.name] = {
+				subheaders = {},
+				numheaders = 0,
+				order = {},
+				pos = #CurrencySave.order + 1
+			}
+			CurrencySave.numheaders = CurrencySave.numheaders + 1
+			tinsert(CurrencySave.order, data.name)
 		end
-		if i == numTokenTypes then
-			Cs_order[Cat].stop = i
+	else
+		ParentHeaders[data.name] = lastheader
+		if not SavedHeaders[lastheader].subheaders[data.name] then
+			SavedHeaders[lastheader].subheaders[data.name] = {
+				pos = #SavedHeaders[lastheader].order + 1
+			}
+			tinsert(SavedHeaders[lastheader].order,data.name)
 		end
 	end
-	Cs_order.Firsttime = true
-	Cs_order.NumCat = Headers
-	ListChanged = false
 end
 
 
@@ -67,82 +31,141 @@ local function BuildList(numTokenTypes)
 	if numTokenTypes == 0 then --in theory to a "loaded to early" check
 		return --nope the way all our of here!
 	end
-	--print("Build")
-	local Headers = 0
-	local currencyInfo = {} --Lets keep an local cache when building the lists
-	if not(Cs_order.Firsttime) then
-		FirstTimeSetup(numTokenTypes)
-	else
-		for i = 1,  numTokenTypes do
-			currencyInfo[i] = C_CurrencyInfo.GetCurrencyListInfo(i)
-			if currencyInfo[i].isHeader then
-				Headers = Headers + 1
+	local lastheader
+	local lastsubheader
+	local headers = {}
+	local currencyInfo = {}
+
+	for i = 1,  numTokenTypes do
+		local data =  C_CurrencyInfo.GetCurrencyListInfo(i)
+		if data then
+			data.currencyIndex = i
+			if data.isHeader then
+				Storeheaders(data, lastheader)
+				if data.currencyListDepth == 0 then
+					if lastheader then
+						headers[lastheader].last = i-1
+					end
+					lastheader = data.name
+					headers[data.name] = {
+						start = i,
+					}
+					if lastsubheader then
+						headers[lastsubheader].last = i-1
+					end
+					lastsubheader = nil
+				elseif data.currencyListDepth == 1 then
+					if lastsubheader then
+						headers[lastsubheader].last = i-1
+					end
+					lastsubheader = data.name
+					headers[data.name] = {
+						start = i
+					}
+				end
+
+			end
+			currencyInfo[i] = data
+		end
+	end
+	headers[lastheader].last = numTokenTypes
+
+	local modcurrencyInfo = {}
+	for _,v in ipairs(CurrencySave.order) do
+		if headers[v] then
+			if headers[v].start ~= headers[v].last and #CurrencySave.headers[v].order ~= 0 then
+				local Subhead = CurrencySave.headers[v].subheaders
+				tinsert(modcurrencyInfo,currencyInfo[headers[v].start])
+				for _, sh in ipairs(CurrencySave.headers[v].order) do
+					for i = headers[sh].start, headers[sh].last do
+						tinsert(modcurrencyInfo,currencyInfo[i])
+					end
+				end
+			else
+				for i = headers[v].start, headers[v].last do
+					tinsert(modcurrencyInfo,currencyInfo[i])
+				end
 			end
 		end
-		ListChanged = ListChanged or Cs_order.NumCat ~= Headers or Cs_order.Nummax ~= numTokenTypes
 	end
+	return modcurrencyInfo
+end
 
-	Cs_order.Nummax = numTokenTypes
-	Cs_order.NumCat = Headers
-
-	if ListChanged then
-		Update_Cs_order(numTokenTypes,currencyInfo)
-		ListChanged = false
-	end
-
-	local Pos = 1
-	local IndexList = {}
-	for i = 1, #Cs_order do
-		--print(Cs_order[i].start, Cs_order[i].stop)
-		for I = Cs_order[i].start, Cs_order[i].stop do
-			IndexList[Pos] = {index = I}
-			Pos = Pos + 1
+local function CreateArrowButtons()
+	for i, frame in pairs(TokenFrame.ScrollBox:GetFrames()) do
+		if not(frame.SortUpArrow) then
+			CreateFrame("Button", nil, frame ,"SortUpArrowTemplate", i)
+			CreateFrame("Button", nil, frame ,"SortDownArrowTemplate", i)
+			frame:HookScript("OnEnter", function (self)
+				if self.elementData.isHeader then
+					self.SortUpArrow:Show()
+					self.SortDownArrow:Show()
+				end
+			end)
+			frame:HookScript("OnLeave", function (self)
+				self.SortUpArrow:Hide()
+				self.SortDownArrow:Hide()
+			end)
 		end
 	end
-	return IndexList
 end
+
 local function Mod_TokenFrame_Update(resetScrollPosition)
 	local numTokenTypes = C_CurrencyInfo.GetCurrencyListSize();
-	if CharacterFrameTab3:IsVisible() then
-		local newDataProvider = CreateDataProvider(BuildList(numTokenTypes));
-		CharacterFrame.TokenFrame.ScrollBox:SetDataProvider(newDataProvider, not resetScrollPosition and ScrollBoxConstants.RetainScrollPosition);
-	end
+	local newDataProvider = CreateDataProvider(BuildList(numTokenTypes));
+	CharacterFrame.TokenFrame.ScrollBox:SetDataProvider(newDataProvider, not resetScrollPosition and ScrollBoxConstants.RetainScrollPosition);
+	CreateArrowButtons()
 end
 
 function CurrencySorter.MoveUp(frame)
-	ListChanged = true
-	--print("Up")
-	for i = 1, #Cs_order do
-		if Cs_order[i].name == frame:GetParent().Name:GetText() and i ~= 1 then
-			--print("Moving")
-			local Temp = Cs_order[i]
-			tremove(Cs_order,i)
-			tinsert(Cs_order, i - 1, Temp)
-			Mod_TokenFrame_Update()
-			break
-		end
+	local name = frame:GetParent().elementData.name
+	local PH = ParentHeaders[name]
+	if PH then
+		local pos = CurrencySave.headers[PH].subheaders[name].pos
+		if pos == 1 then return end
+		local ParentHeader = CurrencySave.headers[PH]
+		ParentHeader.subheaders[name].pos  = pos - 1
+		tremove(ParentHeader.order,pos)
+		tinsert(ParentHeader.order, pos - 1, name)
+		ParentHeader.subheaders[ParentHeader.order[pos]].pos = pos
+	else
+		local pos = CurrencySave.headers[name].pos
+		if pos == 1 then return end
+		CurrencySave.headers[name].pos  = pos - 1
+		tremove(CurrencySave.order,pos)
+		tinsert(CurrencySave.order, pos - 1, name)
+		CurrencySave.headers[CurrencySave.order[pos]].pos = pos
 	end
+	Mod_TokenFrame_Update()
 end
 
 function CurrencySorter.MoveDown(frame)
-	ListChanged = true
-	--print("Down")
-	for i = 1, #Cs_order do
-		if Cs_order[i].name == frame:GetParent().Name:GetText() and i ~= #Cs_order then
-			local Temp = Cs_order[i]
-			tremove(Cs_order,i)
-			tinsert(Cs_order, i + 1, Temp)
-			Mod_TokenFrame_Update()
-			break
-		end
+	local name = frame:GetParent().elementData.name
+	local PH = ParentHeaders[name]
+	if PH then
+		local ParentHeader = CurrencySave.headers[PH]
+		local pos = CurrencySave.headers[PH].subheaders[name].pos
+		if pos == #ParentHeader.order then return end
+		ParentHeader.subheaders[name].pos  = pos + 1
+		tremove(ParentHeader.order,pos)
+		tinsert(ParentHeader.order, pos + 1, name)
+		ParentHeader.subheaders[ParentHeader.order[pos]].pos = pos
+	else
+		local pos = CurrencySave.headers[name].pos
+		if pos == #CurrencySave.order then return end
+		CurrencySave.headers[name].pos = pos + 1
+		tremove(CurrencySave.order,pos)
+		tinsert(CurrencySave.order, pos + 1, name)
+		CurrencySave.headers[CurrencySave.order[pos]].pos = pos
 	end
+	Mod_TokenFrame_Update()
 end
 
 local function CreateResetButton()
 	local Button = CreateFrame("Button","$parentRevertButton",TokenFrame)
 	Button:SetHeight(22)
 	Button:SetWidth(22)
-	Button:SetPoint("TOPRIGHT",TokenFrame,"TOPRIGHT",-8,-40)
+	Button:SetPoint("RIGHT",TokenFrame.CurrencyTransferLogToggleButton,"LEFT",-5)
 	Button:SetNormalTexture("Interface\\Buttons\\UI-SpellbookIcon-PrevPage-Up")
 	Button:SetPushedTexture("Interface\\Buttons\\UI-SpellbookIcon-PrevPage-Down");
 	Button:SetDisabledTexture("Interface\\Buttons\\UI-SpellbookIcon-PrevPage-Disabled");
@@ -156,39 +179,19 @@ local function CreateResetButton()
 		GameTooltip:Hide()
 	end)
 	Button:SetScript("OnClick", function()
-	Cs_order={}
+	CurrencySave = {headers = {}, numheaders = 0, order = {}}
 	Mod_TokenFrame_Update()
 	end	)
 end
 
 
-local ButtonsCreated = false
-local function CreateArrowButtons()
 
-	if ButtonsCreated then return end
-	for i, frame in pairs(TokenFrame.ScrollBox:GetFrames()) do
-		CreateFrame("Button", nil, frame ,"SortUpArrowTemplate", i)
-		CreateFrame("Button", nil, frame ,"SortDownArrowTemplate", i)
-		frame:HookScript("OnEnter", function (self)
-			if self.isHeader then
-				self.SortUpArrow:Show()
-				self.SortDownArrow:Show()
-			end
-		end)
-		frame:HookScript("OnLeave", function (self)
-			self.SortUpArrow:Hide()
-			self.SortDownArrow:Hide()
-		end)
-	end
-	ButtonsCreated = true
-end
 
 
 local eventFrame = CreateFrame("FRAME")
 
 local function Load()
-	hooksecurefunc("TokenFrame_Update", Mod_TokenFrame_Update)
-	TokenFrame:HookScript("OnShow",CreateArrowButtons)
+	hooksecurefunc(TokenFrame,"Update", Mod_TokenFrame_Update)
 	CreateResetButton()
 	eventFrame:UnregisterEvent("ADDON_LOADED")
 end
@@ -196,7 +199,8 @@ end
 eventFrame:SetScript("OnEvent", function(_,event, name)
 	if event == "ADDON_LOADED" then
 		if name =="CurrencySorter" then
-			if IsAddOnLoaded("Blizzard_TokenUI") then
+			CurrencySave = CurrencySave or {headers = {}, numheaders = 0,order = {}}
+			if C_AddOns.IsAddOnLoaded("Blizzard_TokenUI") then
 				Load()
 			end
 		elseif name == "Blizzard_TokenUI" then

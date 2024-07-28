@@ -1,9 +1,9 @@
-## Interface: 100200
+## Interface: 110000
 ## Title: Currency Sorter
-## Version: 10.2.0
+## Version: 11.0.0
 ## Notes: Move around the currency categories
 ## Author: Andols
-## SavedVariablesPerCharacter: Cs_order
+## SavedVariablesPerCharacter: CurrencySave
 
 ## X-Curse-Project-ID: 88028
 
