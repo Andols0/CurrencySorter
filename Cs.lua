@@ -69,6 +69,9 @@ local function BuildList(numTokenTypes)
 		end
 	end
 	headers[lastheader].last = numTokenTypes
+	if lastsubheader then 
+		headers[lastsubheader].last =numTokenTypes
+	end
 
 	local modcurrencyInfo = {}
 	for _,v in ipairs(CurrencySave.order) do
