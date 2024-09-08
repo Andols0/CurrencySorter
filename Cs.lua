@@ -1,7 +1,7 @@
 CurrencySorter = {}
 
 local ParentHeaders = {}
-
+local Tenabled
 local function Storeheaders(data, lastheader)
 	local SavedHeaders = CurrencySave.headers
 	if data.currencyListDepth == 0 then
@@ -114,6 +114,10 @@ local function CreateArrowButtons()
 end
 
 local function Mod_TokenFrame_Update(resetScrollPosition)
+	if Tenabled then
+		--Exit out of the function to not taint anything.
+		return
+	end
 	local numTokenTypes = C_CurrencyInfo.GetCurrencyListSize();
 	local newDataProvider = CreateDataProvider(BuildList(numTokenTypes));
 	CharacterFrame.TokenFrame.ScrollBox:SetDataProvider(newDataProvider, not resetScrollPosition and ScrollBoxConstants.RetainScrollPosition);
@@ -182,9 +186,36 @@ local function CreateResetButton()
 		GameTooltip:Hide()
 	end)
 	Button:SetScript("OnClick", function()
-	CurrencySave = {headers = {}, numheaders = 0, order = {}}
-	Mod_TokenFrame_Update()
+		CurrencySave = {headers = {}, numheaders = 0, order = {}}
+		Mod_TokenFrame_Update()
 	end	)
+
+	local Checkbox = CreateFrame("CheckButton", "$parentTransferEnable", TokenFrame, "UICheckButtonTemplate")
+	Checkbox.Text:SetText("Enable transfers")
+	Checkbox:SetHeight(22)
+	Checkbox:SetWidth(22)
+	Checkbox:ClearAllPoints()
+	Checkbox:SetPoint("RIGHT", Button, "LEFT", -80, 0)
+	Checkbox:Show()
+	Checkbox.tooltip = "Check this to enable transfers and reload the UI.\nEnabling this will disable sorting."
+	Checkbox:HookScript("OnEnter", function(self)
+		GameTooltip:SetOwner(self, "ANCHOR_RIGHT");
+		GameTooltip_AddNormalLine(GameTooltip, Checkbox.tooltip);
+		GameTooltip:Show()
+	end)
+	Checkbox:HookScript("OnLeave", function(self)
+		GameTooltip_Hide()
+	end)
+	Checkbox:HookScript("OnClick", function(self)
+		if self:GetChecked() == true then
+			CurrencySave.TransferOn = true
+			ReloadUI()
+		else
+			Tenabled = false
+			CurrencySave.TransferOn = nil
+			Mod_TokenFrame_Update()
+		end		
+	end)
 end
 
 
@@ -205,6 +236,11 @@ eventFrame:SetScript("OnEvent", function(_,event, name)
 			CurrencySave = CurrencySave or {headers = {}, numheaders = 0,order = {}}
 			if C_AddOns.IsAddOnLoaded("Blizzard_TokenUI") then
 				Load()
+			end
+			if CurrencySave.TransferOn then
+				TokenFrameTransferEnable:SetChecked(true)
+				Tenabled = true
+				CurrencySave.TransferOn = nil
 			end
 		elseif name == "Blizzard_TokenUI" then
 			Load()
