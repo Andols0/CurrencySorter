@@ -77,8 +77,10 @@ local function BuildList(numTokenTypes)
 	for _,v in ipairs(CurrencySave.order) do
 		if headers[v] then
 			if headers[v].start ~= headers[v].last and #CurrencySave.headers[v].order ~= 0 then
+				for i = headers[v].start, headers[CurrencySave.headers[v].order[1]].start -1 do
+					tinsert(modcurrencyInfo,currencyInfo[i])
+				end
 				local Subhead = CurrencySave.headers[v].subheaders
-				tinsert(modcurrencyInfo,currencyInfo[headers[v].start])
 				for _, sh in ipairs(CurrencySave.headers[v].order) do
 					for i = headers[sh].start, headers[sh].last do
 						tinsert(modcurrencyInfo,currencyInfo[i])
@@ -120,7 +122,7 @@ local function Mod_TokenFrame_Update(resetScrollPosition)
 	end
 	local numTokenTypes = C_CurrencyInfo.GetCurrencyListSize();
 	local newDataProvider = CreateDataProvider(BuildList(numTokenTypes));
-	CharacterFrame.TokenFrame.ScrollBox:SetDataProvider(newDataProvider, not resetScrollPosition and ScrollBoxConstants.RetainScrollPosition);
+	CharacterFrame.TokenFrame.ScrollBox:SetDataProvider(newDataProvider, ScrollBoxConstants.RetainScrollPosition);
 	CreateArrowButtons()
 end
 
@@ -172,7 +174,7 @@ local function CreateResetButton()
 	local Button = CreateFrame("Button","$parentRevertButton",TokenFrame)
 	Button:SetHeight(22)
 	Button:SetWidth(22)
-	Button:SetPoint("RIGHT",TokenFrame.CurrencyTransferLogToggleButton,"LEFT",-5)
+	Button:SetPoint("RIGHT",TokenFrame.filterDropdown,"LEFT",-5)
 	Button:SetNormalTexture("Interface\\Buttons\\UI-SpellbookIcon-PrevPage-Up")
 	Button:SetPushedTexture("Interface\\Buttons\\UI-SpellbookIcon-PrevPage-Down");
 	Button:SetDisabledTexture("Interface\\Buttons\\UI-SpellbookIcon-PrevPage-Disabled");
@@ -213,14 +215,19 @@ local function CreateResetButton()
 		else
 			Tenabled = false
 			CurrencySave.TransferOn = nil
+			TokenFramePopup.CurrencyTransferToggleButton:SetScript("OnClick", function() StaticPopup_Show("CSTAINT") end)
 			Mod_TokenFrame_Update()
 		end		
 	end)
+
+	StaticPopupDialogs["CSTAINT"] = {
+		text = "It's not possible to transfer while sorting is enabled. Press continue to temporarily disable sorting and reload the UI.",
+		button1 = "Continue",
+		button2 = "Cancel",
+		OnAccept = function (self) Checkbox:Click() end,
+		OnCancel = function (self) return end,
+	}
 end
-
-
-
-
 
 local eventFrame = CreateFrame("FRAME")
 
@@ -228,6 +235,9 @@ local function Load()
 	hooksecurefunc(TokenFrame,"Update", Mod_TokenFrame_Update)
 	CreateResetButton()
 	eventFrame:UnregisterEvent("ADDON_LOADED")
+	if not CurrencySave.TransferOn then
+		TokenFramePopup.CurrencyTransferToggleButton:SetScript("OnClick", function() StaticPopup_Show("CSTAINT") end)
+	end
 end
 
 eventFrame:SetScript("OnEvent", function(_,event, name)
