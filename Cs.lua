@@ -49,12 +49,16 @@ local function BuildList(numTokenTypes)
 					lastheader = data.name
 					headers[data.name] = {
 						start = i,
+						ismainheader = true
 					}
 					if lastsubheader then
 						headers[lastsubheader].last = i-1
 					end
 					lastsubheader = nil
 				elseif data.currencyListDepth == 1 then
+					if headers[lastheader].ismainheader and not(headers[lastheader].firstsubheaderstart) then
+						headers[lastheader].firstsubheaderstart = i
+					end
 					if lastsubheader then
 						headers[lastsubheader].last = i-1
 					end
@@ -77,13 +81,15 @@ local function BuildList(numTokenTypes)
 	for _,v in ipairs(CurrencySave.order) do
 		if headers[v] then
 			if headers[v].start ~= headers[v].last and #CurrencySave.headers[v].order ~= 0 then
-				for i = headers[v].start, headers[CurrencySave.headers[v].order[1]].start -1 do
+				for i = headers[v].start, headers[v].firstsubheaderstart -1 do
 					tinsert(modcurrencyInfo,currencyInfo[i])
 				end
 				local Subhead = CurrencySave.headers[v].subheaders
 				for _, sh in ipairs(CurrencySave.headers[v].order) do
-					for i = headers[sh].start, headers[sh].last do
-						tinsert(modcurrencyInfo,currencyInfo[i])
+					if headers[sh] then
+						for i = headers[sh].start, headers[sh].last do
+							tinsert(modcurrencyInfo,currencyInfo[i])
+						end
 					end
 				end
 			else
