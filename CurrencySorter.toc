@@ -1,6 +1,9 @@
-## Interface: 110207
+## Interface: @toc-version-midnight@
+#@debug@
+## Interface: 120000
+#@end-debug@
 ## Title: Currency Sorter
-## Version: 11.2.7
+## Version: 12.0.0
 ## Notes: Move around the currency categories
 ## Author: Andols
 ## SavedVariablesPerCharacter: CurrencySave
