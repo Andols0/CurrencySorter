@@ -1,6 +1,6 @@
-## Interface: 110200
+## Interface: 110207
 ## Title: Currency Sorter
-## Version: 11.2.0
+## Version: 11.2.7
 ## Notes: Move around the currency categories
 ## Author: Andols
 ## SavedVariablesPerCharacter: CurrencySave
