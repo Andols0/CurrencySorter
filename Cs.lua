@@ -121,13 +121,39 @@ local function CreateArrowButtons()
 	end
 end
 
-local function Mod_TokenFrame_Update(resetScrollPosition)
-	if Tenabled then
-		--Exit out of the function to not taint anything.
+--Copied from base code, must be some edge case where the currencies are updated when the frame is open. As in move things around i need to do this as well.
+local function EdgeCaseThingy(self)
+	if self.selectedID then
+		local function FindSelectedTokenButton(button, elementData)
+			return elementData.currencyIndex == self.selectedID;
+		end
+		local selectedEntry = self.ScrollBox:FindFrameByPredicate(FindSelectedTokenButton);
+
+		-- If we're updating the currency list while the "Options" popup is open then we should refresh it as well
+		if selectedEntry and self.Popup:IsShown() then
+			self:UpdatePopup(selectedEntry);
+		end
+
+		-- We want to hide the Currency Transfer Menu if we select a different currency than the one we currency have open for transferring
+		local currencyTransferMismatch = selectedEntry and CurrencyTransferMenu:GetCurrencyID() ~= selectedEntry.elementData.currencyID;
+		if currencyTransferMismatch then
+			HideUIPanel(CurrencyTransferMenu);
+		end
+	else
+		HideUIPanel(CurrencyTransferMenu);
+	end
+end
+
+local function Mod_TokenFrame_Update()
+	local currencyDataReady = not C_CurrencyInfo.DoesCurrentFilterRequireAccountCurrencyData() or C_CurrencyInfo.IsAccountCharacterCurrencyDataReady();
+	--Exit out of the function to not taint anything.
+	--And exit if the data isn't ready.
+	if Tenabled or not(currencyDataReady) then
 		return
 	end
 	local numTokenTypes = C_CurrencyInfo.GetCurrencyListSize();
 	local newDataProvider = CreateDataProvider(BuildList(numTokenTypes));
+	EdgeCaseThingy(CharacterFrame.TokenFrame)
 	CharacterFrame.TokenFrame.ScrollBox:SetDataProvider(newDataProvider, ScrollBoxConstants.RetainScrollPosition);
 	CreateArrowButtons()
 end
